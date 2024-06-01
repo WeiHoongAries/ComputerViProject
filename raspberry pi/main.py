@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 import pytesseract
+
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 image = cv2.imread('raspberry pi//pen15.jpg',cv2.IMREAD_GRAYSCALE)
 blur=cv2.GaussianBlur(image,(5,5),0)
 _, after_thresh = cv2.threshold(blur,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
