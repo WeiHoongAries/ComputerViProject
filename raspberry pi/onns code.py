@@ -3,10 +3,11 @@ import cv2 as cv
 import numpy as np
 from PIL import Image,ImageDraw
 
-dataset = ["raspberry pi\\pen15.jpg"]
+dataset = ["raspberry pi\\pen15.jpg", "raspberry pi\\222.jpg"]
 
 def preprocessing(image):
     size = 640
+    #height,width,channel
     height,width = image.shape[:2]
     aspect_ratio = width/height
     if width > height:
@@ -14,13 +15,13 @@ def preprocessing(image):
         new_height = int(new_width/aspect_ratio)
         image=cv.resize(image,(new_width,new_height))
         padding = size - new_height
-        image=cv.copyMakeBorder(image,0,padding,0,0,cv.BORDER_REPLICATE)
+        image=cv.copyMakeBorder(image,0,padding,0,0,cv.BORDER_CONSTANT)
     else:
         new_height=size
         new_width = int(aspect_ratio * new_height)
         image=cv.resize(image,(new_width,new_height))
         padding = size - new_width
-        image=cv.copyMakeBorder(image,0,0,0,padding,cv.BORDER_REPLICATE)
+        image=cv.copyMakeBorder(image,0,0,0,padding,cv.BORDER_CONSTANT)
     cv.imshow("Prerprocessed",image)
     cv.waitKey(0)
     cv.destroyAllWindows()
@@ -53,17 +54,21 @@ def postprocess(output_tensor, conf_threshold=0.5, nms_threshold=0.4):
 def main():
     sess = rt.InferenceSession("raspberry pi\\weights\\best.onnx",providers=['CPUExecutionProvider'])
     for file in dataset:
-        image = cv.imread(file,cv.IMREAD_COLOR)
+        image = cv.imread(file,cv.IMREAD_COLOR) #BGR
         preprocessed_image = preprocessing(image)
 
+        #opencv to PIL format
         RGB_image = Image.fromarray(cv.cvtColor(preprocessed_image,cv.COLOR_BGR2RGB))
+        #RGB_Image as draw target
         draw =ImageDraw.Draw(RGB_image)
         
-        # nchw expand,,transpose
+        # NCHW expand,,transpose
+        #pixel values convert to float format and normalized to 0-1 range 
         normalized = preprocessed_image.astype(np.float32) / 255
+        #H(0),W(1),C(2) to CHW
         transposed = np.transpose(normalized,[2,0,1])
         expand = np.expand_dims(transposed,axis=0)
-        output0=sess.run(None,{"images":expand})
+        output0 = sess.run(None,{"images":expand})
         output0 = np.array(output0[0])
         boxes, confidences = postprocess(output0)
         x1 = int(boxes[0,0])
@@ -75,7 +80,7 @@ def main():
         image = np.array(RGB_image)
         image = cv.cvtColor(image,cv.COLOR_RGB2BGR)
 
-        cv.imshow("Result",crop)
+        cv.imshow("Result",image)
         cv.waitKey(0)
         cv.destroyAllWindows()
 
