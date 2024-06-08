@@ -3,7 +3,7 @@ import cv2 as cv
 import numpy as np
 from PIL import Image,ImageDraw
 
-dataset = ["raspberry pi\\pen15.jpg", "raspberry pi\\222.jpg"]
+dataset = ["pen15.jpg", "222.jpg"]
 
 def preprocessing(image):
     size = 640
@@ -22,9 +22,9 @@ def preprocessing(image):
         image=cv.resize(image,(new_width,new_height))
         padding = size - new_width
         image=cv.copyMakeBorder(image,0,0,0,padding,cv.BORDER_CONSTANT)
-    cv.imshow("Prerprocessed",image)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
+    # cv.imshow("Prerprocessed",image)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
     return image
 
 def postprocess(output_tensor, conf_threshold=0.5, nms_threshold=0.4):
@@ -52,7 +52,7 @@ def postprocess(output_tensor, conf_threshold=0.5, nms_threshold=0.4):
     return boxes[indices], confidences[indices]
 
 def main():
-    sess = rt.InferenceSession("raspberry pi\\weights\\best.onnx",providers=['CPUExecutionProvider'])
+    sess = rt.InferenceSession("weights\\best.onnx",providers=['CPUExecutionProvider'])
     for file in dataset:
         image = cv.imread(file,cv.IMREAD_COLOR) #BGR
         preprocessed_image = preprocessing(image)
@@ -70,19 +70,20 @@ def main():
         expand = np.expand_dims(transposed,axis=0)
         output0 = sess.run(None,{"images":expand})
         output0 = np.array(output0[0])
-        boxes, confidences = postprocess(output0)
-        x1 = int(boxes[0,0])
-        y1 = int(boxes[0,1])
-        x2 = int(boxes[0,2])
-        y2 = int(boxes[0,3])
-        crop = preprocessed_image[y1:y2,x1:x2]
-        draw.rectangle(boxes,outline='red',width=2)
-        image = np.array(RGB_image)
-        image = cv.cvtColor(image,cv.COLOR_RGB2BGR)
+        bbox, confidences = postprocess(output0)
+        for boxes in bbox:
+            x1 = int(boxes[0])
+            y1 = int(boxes[1])
+            x2 = int(boxes[2])
+            y2 = int(boxes[3])
+            crop = preprocessed_image[y1:y2,x1:x2]
+            # draw.rectangle(boxes,outline='red',width=2)
+            # image = np.array(RGB_image)
+            # image = cv.cvtColor(image,cv.COLOR_RGB2BGR)
 
-        cv.imshow("Result",image)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+            cv.imshow("Result",crop)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
