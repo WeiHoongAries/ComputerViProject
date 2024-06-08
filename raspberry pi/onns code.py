@@ -3,7 +3,7 @@ import cv2 as cv
 import numpy as np
 from PIL import Image,ImageDraw
 
-dataset = ["pen15.jpg", "222.jpg"]
+dataset = ["raspberry pi\\pen15.jpg", "raspberry pi\\222.jpg"]
 
 def preprocessing(image):
     size = 640
@@ -52,7 +52,7 @@ def postprocess(output_tensor, conf_threshold=0.5, nms_threshold=0.4):
     return boxes[indices], confidences[indices]
 
 def main():
-    sess = rt.InferenceSession("weights\\best.onnx",providers=['CPUExecutionProvider'])
+    sess = rt.InferenceSession("raspberry pi\\weights\\best.onnx",providers=['CPUExecutionProvider'])
     for file in dataset:
         image = cv.imread(file,cv.IMREAD_COLOR) #BGR
         preprocessed_image = preprocessing(image)
