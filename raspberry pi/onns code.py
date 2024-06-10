@@ -22,9 +22,9 @@ def preprocessing(image):
         image=cv.resize(image,(new_width,new_height))
         padding = size - new_width
         image=cv.copyMakeBorder(image,0,0,0,padding,cv.BORDER_CONSTANT)
-    # cv.imshow("Prerprocessed",image)
-    # cv.waitKey(0)
-    # cv.destroyAllWindows()
+    cv.imshow("Prerprocessed",image)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
     return image
 
 def postprocess(output_tensor, conf_threshold=0.5, nms_threshold=0.4):
@@ -64,7 +64,7 @@ def crop(image,bbox,preprocessed_image):
     y1 = int(bbox[1])
     x2 = int(bbox[2])
     y2 = int(bbox[3])
-    
+    #Padding bottom and right doesnt affect the location of the coordinates and image, so just remove
     if original_width > original_height:
         new_width = size
         new_height = int(new_width / aspect_ratio)
@@ -78,19 +78,17 @@ def crop(image,bbox,preprocessed_image):
         # Remove padding
         no_pad_image = preprocessed_image[:, :new_width]
 
+    #calculate the resize scale(use for calculate the coordinates location after resized)
     resized_height_scale = original_height/no_pad_image.shape[0]
     resized_width_scale = original_width/no_pad_image.shape[1]
     x1=int(x1*resized_width_scale)
     y1=int(y1*resized_height_scale)
     x2=int(x2*resized_width_scale)
     y2=int(y2*resized_height_scale)
+    #crop image with rearranged coordinates
     image = image[y1:y2,x1:x2]
     
     return image
-
-
-
-    return cropped_image
 
 def main():
     for file in dataset:
@@ -101,7 +99,6 @@ def main():
         #RGB_Image as draw target
         draw =ImageDraw.Draw(RGB_image)
         
-        
         #pixel values convert to float format and normalized to 0-1 range 
         normalized = preprocessed_image.astype(np.float32) / 255
         #H(0),W(1),C(2) to CHW
@@ -111,13 +108,7 @@ def main():
         output0 = np.array(output0[0])
         bbox, confidences = postprocess(output0)
         for boxes in bbox:
-            
             cropped_image = crop(image,boxes,preprocessed_image)
-            # crop = preprocessed_image[y1:y2,x1:x2]
-            # draw.rectangle(boxes,outline='red',width=2)
-            # image = np.array(RGB_image)
-            # image = cv.cvtColor(image,cv.COLOR_RGB2BGR)
-
             cv.imshow("Result",cropped_image)
             cv.waitKey(0)
             cv.destroyAllWindows()
