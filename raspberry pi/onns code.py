@@ -51,37 +51,74 @@ def postprocess(output_tensor, conf_threshold=0.5, nms_threshold=0.4):
 
     return boxes[indices], confidences[indices]
 
-def main():
+def AI_inference(preprocessed_image):
     sess = rt.InferenceSession("raspberry pi\\weights\\best.onnx",providers=['CPUExecutionProvider'])
+    output0 = sess.run(None,{"images":preprocessed_image})
+    return output0
+
+def crop(image,bbox,preprocessed_image):
+    size=640
+    original_height,original_width=image.shape[:2]
+    aspect_ratio = original_width/original_height
+    x1 = int(bbox[0])
+    y1 = int(bbox[1])
+    x2 = int(bbox[2])
+    y2 = int(bbox[3])
+    
+    if original_width > original_height:
+        new_width = size
+        new_height = int(new_width / aspect_ratio)
+        padding = size - new_height
+        # Remove padding
+        no_pad_image = preprocessed_image[:new_height, :]
+    else:
+        new_height = size
+        new_width = int(aspect_ratio * new_height)
+        padding = size - new_width
+        # Remove padding
+        no_pad_image = preprocessed_image[:, :new_width]
+
+    resized_height_scale = original_height/no_pad_image.shape[0]
+    resized_width_scale = original_width/no_pad_image.shape[1]
+    x1=int(x1*resized_width_scale)
+    y1=int(y1*resized_height_scale)
+    x2=int(x2*resized_width_scale)
+    y2=int(y2*resized_height_scale)
+    image = image[y1:y2,x1:x2]
+    
+    return image
+
+
+
+    return cropped_image
+
+def main():
     for file in dataset:
         image = cv.imread(file,cv.IMREAD_COLOR) #BGR
         preprocessed_image = preprocessing(image)
-
         #opencv to PIL format
         RGB_image = Image.fromarray(cv.cvtColor(preprocessed_image,cv.COLOR_BGR2RGB))
         #RGB_Image as draw target
         draw =ImageDraw.Draw(RGB_image)
         
-        # NCHW expand,,transpose
+        
         #pixel values convert to float format and normalized to 0-1 range 
         normalized = preprocessed_image.astype(np.float32) / 255
         #H(0),W(1),C(2) to CHW
         transposed = np.transpose(normalized,[2,0,1])
         expand = np.expand_dims(transposed,axis=0)
-        output0 = sess.run(None,{"images":expand})
+        output0 = AI_inference(expand)
         output0 = np.array(output0[0])
         bbox, confidences = postprocess(output0)
         for boxes in bbox:
-            x1 = int(boxes[0])
-            y1 = int(boxes[1])
-            x2 = int(boxes[2])
-            y2 = int(boxes[3])
-            crop = preprocessed_image[y1:y2,x1:x2]
+            
+            cropped_image = crop(image,boxes,preprocessed_image)
+            # crop = preprocessed_image[y1:y2,x1:x2]
             # draw.rectangle(boxes,outline='red',width=2)
             # image = np.array(RGB_image)
             # image = cv.cvtColor(image,cv.COLOR_RGB2BGR)
 
-            cv.imshow("Result",crop)
+            cv.imshow("Result",cropped_image)
             cv.waitKey(0)
             cv.destroyAllWindows()
 
